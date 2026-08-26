@@ -1,6 +1,13 @@
 /**
  * interfaz/vista_empleados.js
- * ABM del padron de empleados del reloj. Solo para el rol admin.
+ * Padron de empleados del reloj.
+ *
+ * El admin lo edita; el operador solo lo mira. El modo se decide en cada
+ * refresco leyendo estado.puedeEditarPadron, asi que si cambia el usuario sin
+ * recargar la pagina la pantalla se acomoda igual.
+ *
+ * Ocultar los botones es comodidad, no seguridad: las reglas de Firestore son
+ * las que rechazan la escritura si el que la intenta no es admin.
  *
  * Todas las operaciones pueden fallar (Firestore puede rechazar por reglas o
  * cortarse la conexion), asi que cada una avisa en pantalla en lugar de
@@ -32,18 +39,43 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
     btnImportar: document.getElementById('btn-importar'),
     btnExportar: document.getElementById('btn-exportar-empleados'),
     btnVaciar: document.getElementById('btn-vaciar-empleados'),
+    // solo lectura
+    grilla: document.getElementById('grilla-empleados'),
+    tarjetaForm: document.getElementById('tarjeta-form-empleado'),
+    avisoSoloLectura: document.getElementById('aviso-solo-lectura'),
+    thAcciones: document.getElementById('th-acciones-empleados'),
   };
 
   let editando = null;
   let orden = { clave: 'legajo', desc: false, tipo: 'legajo' };
   let cache = [];
+  let editable = false;
+
+  /** Muestra u oculta todo lo que sirve para modificar el padron. */
+  function aplicarModo() {
+    editable = Boolean(estado.puedeEditarPadron);
+
+    mostrar(el.tarjetaForm, editable);
+    mostrar(el.avisoSoloLectura, !editable);
+    mostrar(el.thAcciones, editable);
+
+    // Sin la tarjeta del formulario, la tabla ocupa todo el ancho.
+    el.grilla.classList.toggle('dos-columnas--una', !editable);
+
+    if (!editable) {
+      limpiarForm();
+      mostrar(el.detectados, false);
+    }
+  }
 
   async function refrescar() {
+    aplicarModo();
+
     try {
       cache = await estado.repo.listar();
     } catch (error) {
       cache = [];
-      el.cuerpo.innerHTML = `<tr><td colspan="5" class="celda-vacia">No se pudo leer el padron: ${escaparHtml(error.message)}</td></tr>`;
+      el.cuerpo.innerHTML = `<tr><td colspan="${editable ? 5 : 4}" class="celda-vacia">No se pudo leer el padron: ${escaparHtml(error.message)}</td></tr>`;
       texto('conteo-empleados', 'sin datos');
       return;
     }
@@ -61,13 +93,16 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
 
   function pintarTabla() {
     const lista = visibles();
+    const columnas = editable ? 5 : 4;
+    const vacio = cache.length
+      ? 'Ningun empleado coincide con la busqueda.'
+      : editable
+        ? 'Todavia no hay empleados. Carga el .dat y usa "Dar de alta los legajos detectados", o importa un CSV.'
+        : 'El padron todavia esta vacio. Un administrador tiene que cargarlo.';
+
     el.cuerpo.innerHTML = lista.length
       ? lista.map(fila).join('')
-      : `<tr><td colspan="5" class="celda-vacia">${
-          cache.length
-            ? 'Ningun empleado coincide con la busqueda.'
-            : 'Todavia no hay empleados. Carga el .dat y usa "Dar de alta los legajos detectados", o importa un CSV.'
-        }</td></tr>`;
+      : `<tr><td colspan="${columnas}" class="celda-vacia">${vacio}</td></tr>`;
 
     const etiqueta = `${cache.length} empleado${cache.length === 1 ? '' : 's'}`;
     texto('conteo-empleados', etiqueta);
@@ -75,15 +110,19 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
   }
 
   function fila(e) {
+    const acciones = editable
+      ? `<td class="acciones">
+        <button type="button" class="btn btn--chico" data-accion="editar" data-legajo="${escaparHtml(e.legajo)}">Editar</button>
+        <button type="button" class="btn btn--chico btn--peligro" data-accion="eliminar" data-legajo="${escaparHtml(e.legajo)}">Eliminar</button>
+      </td>`
+      : '';
+
     return `<tr${e.activo ? '' : ' class="fila--inactiva"'}>
       <td class="num">${escaparHtml(e.legajo)}</td>
       <td>${escaparHtml(e.nombre) || '<span class="sin-cargar">sin nombre</span>'}</td>
       <td>${escaparHtml(e.sector)}</td>
       <td>${e.activo ? '<span class="chip chip--ok">Activo</span>' : '<span class="chip chip--baja">Inactivo</span>'}</td>
-      <td class="acciones">
-        <button type="button" class="btn btn--chico" data-accion="editar" data-legajo="${escaparHtml(e.legajo)}">Editar</button>
-        <button type="button" class="btn btn--chico btn--peligro" data-accion="eliminar" data-legajo="${escaparHtml(e.legajo)}">Eliminar</button>
-      </td>
+      ${acciones}
     </tr>`;
   }
 
@@ -95,7 +134,7 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
   }
 
   function pintarDetectados() {
-    const faltantes = legajosDetectados();
+    const faltantes = editable ? legajosDetectados() : [];
     mostrar(el.detectados, faltantes.length > 0);
     if (!faltantes.length) return;
 
@@ -136,6 +175,7 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
   }
 
   async function guardar() {
+    if (!editable) return;
     const legajo = editando || el.legajo.value.trim();
     if (!legajo) {
       avisar('Escribi el numero de legajo.', 'error');
@@ -175,6 +215,7 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
   }
 
   async function eliminar(legajo) {
+    if (!editable) return;
     const emp = cache.find((e) => e.legajo === legajo);
     const quien = emp?.nombre ? `${legajo} (${emp.nombre})` : legajo;
     if (!confirm(`Eliminar el legajo ${quien} del padron?`)) return;
@@ -248,7 +289,7 @@ export function crearVistaEmpleados(estado, alCambiarPadron) {
 
   el.cuerpo.addEventListener('click', (e) => {
     const boton = e.target.closest('button[data-accion]');
-    if (!boton) return;
+    if (!boton || !editable) return;
     const legajo = boton.dataset.legajo;
     if (boton.dataset.accion === 'editar') {
       const emp = cache.find((x) => x.legajo === legajo);

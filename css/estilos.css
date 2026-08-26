@@ -35,6 +35,14 @@
 
 * { box-sizing: border-box; }
 
+/**
+ * El atributo hidden oculta con display:none, pero desde la hoja del
+ * navegador, que pierde contra cualquier clase que declare display.
+ * Como aca casi todo contenedor es flex o grid, sin esta regla las
+ * pantallas y las vistas se apilan todas juntas.
+ */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -256,6 +264,10 @@ code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   grid-template-columns: minmax(270px, 330px) 1fr;
   gap: 18px; align-items: start;
 }
+
+/* Cuando se oculta la tarjeta del formulario (padron en solo lectura),
+   la tabla ocupa todo el ancho en lugar de quedar en la columna angosta. */
+.dos-columnas--una { grid-template-columns: 1fr; }
 
 .nota { margin: 0 0 10px; font-size: 0.78rem; line-height: 1.45; color: var(--tinta-3); }
 

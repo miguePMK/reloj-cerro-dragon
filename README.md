@@ -91,8 +91,12 @@ permite una sola vez.
 |---|---|---|
 | Cargar el `.dat` y ver jornadas | si | si |
 | Descargar el Excel | si | si |
-| ABM de empleados del reloj | no | si |
-| ABM de usuarios del sistema | no | si |
+| Ver el padron de empleados | si | si |
+| Agregar, editar o borrar empleados | no | si |
+| Ver y gestionar usuarios del sistema | no | si |
+
+El operador ve el padron en solo lectura: sin formulario, sin botones de accion
+y sin importar ni exportar. La pestaña Usuarios no le aparece.
 
 El rol se guarda en `usuarios/{uid}` y las reglas de Firestore lo verifican en
 cada operacion. Ocultar botones no alcanza: la seguridad esta en las reglas.
@@ -256,4 +260,4 @@ publicado, revisa la capitalizacion de las carpetas.
 
 ---
 
-Version 0.3
+Version 0.4

@@ -47,7 +47,9 @@ const pantallas = {
 
 const VISTAS = {
   fichadas: { id: 'vista-fichadas', soloAdmin: false },
-  empleados: { id: 'vista-empleados', soloAdmin: true },
+  // El operador ve el padron en modo lectura: la vista se muestra igual y es
+  // ella la que se acomoda segun el rol.
+  empleados: { id: 'vista-empleados', soloAdmin: false },
   usuarios: { id: 'vista-usuarios', soloAdmin: true, soloFirebase: true },
 };
 
@@ -135,12 +137,12 @@ function montarVistas() {
     vistas.fichadas = crearVistaFichadas(estado);
   }
 
-  // Si primero entra un operador y despues un admin en la misma carga de
-  // pagina, estas dos se arman recien en ese momento.
-  if (!vistas.empleados && estado.puedeEditarPadron) {
+  if (!vistas.empleados) {
     vistas.empleados = crearVistaEmpleados(estado, () => vistas.fichadas.refrescar());
   }
 
+  // Si primero entra un operador y despues un admin en la misma carga de
+  // pagina, esta se arma recien en ese momento.
   if (!vistas.usuarios && estado.modo === 'firebase' && estado.puedeEditarPadron) {
     vistas.usuarios = crearVistaUsuarios(estado, new RepoUsuarios());
   }
@@ -180,7 +182,8 @@ async function entrarAlSistema(perfil) {
   verPantalla('app');
   navegar();
 
-  if (estado.puedeEditarPadron) await vistas.empleados.refrescar();
+  // Trae el padron: el operador tambien lo necesita para ver los nombres.
+  await vistas.empleados.refrescar();
 }
 
 /** Borra de memoria y de pantalla los datos de la sesion anterior. */

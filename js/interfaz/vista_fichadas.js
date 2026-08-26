@@ -56,7 +56,6 @@ export function crearVistaFichadas(estado) {
     errores: document.getElementById('panel-errores'),
     erroresLista: document.getElementById('lista-errores'),
     avisoSinCargar: document.getElementById('aviso-sin-cargar'),
-    avisoBoton: document.getElementById('aviso-sin-cargar-boton'),
   };
 
   let orden = { clave: 'fecha', desc: false, tipo: 'texto' };
@@ -209,11 +208,10 @@ export function crearVistaFichadas(estado) {
       `${ordenadas.length} de ${estado.jornadas.length} jornada${estado.jornadas.length === 1 ? '' : 's'}`
     );
 
-    // El aviso de legajos sin cargar solo tiene sentido si el usuario puede
-    // hacer algo al respecto: el operador no tiene acceso al padron.
+    // El operador tambien puede ir al padron (a mirarlo), asi que el boton
+    // queda para los dos. Lo que cambia es que se le puede pedir hacer.
     const puedeEditarPadron = Boolean(estado.puedeEditarPadron);
     mostrar(el.avisoSinCargar, t.sinEmpleado > 0);
-    mostrar(el.avisoBoton, puedeEditarPadron);
     if (t.sinEmpleado > 0) {
       const plural = t.sinEmpleado === 1 ? '' : 's';
       texto(

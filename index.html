@@ -250,6 +250,10 @@
         <p>El legajo es el numero que registra el biometrico. El nombre sirve para leer las tablas.</p>
       </header>
 
+      <div id="aviso-solo-lectura" class="alerta alerta--aviso" hidden>
+        <p>Solo lectura. Para agregar o corregir empleados, pedile a un administrador.</p>
+      </div>
+
       <div id="panel-detectados" class="alerta alerta--aviso" hidden>
         <p class="alerta-titulo" id="detectados-titulo"></p>
         <p class="alerta-ayuda">Toca un legajo para completarlo, o dalos de alta todos juntos y ponele los nombres despues.</p>
@@ -257,9 +261,9 @@
         <button type="button" id="btn-alta-masiva" class="btn btn--chico">Dar de alta los legajos detectados</button>
       </div>
 
-      <div class="dos-columnas">
+      <div class="dos-columnas" id="grilla-empleados">
 
-        <div class="tarjeta">
+        <div class="tarjeta" id="tarjeta-form-empleado">
           <h3 id="form-titulo">Nuevo empleado</h3>
           <div id="form-empleado" class="form">
             <label class="campo">
@@ -313,7 +317,7 @@
                   <th data-orden="nombre" data-tipo="texto" scope="col">Nombre</th>
                   <th data-orden="sector" data-tipo="texto" scope="col">Sector</th>
                   <th data-orden="activo" data-tipo="texto" scope="col">Estado</th>
-                  <th scope="col"><span class="sr-only">Acciones</span></th>
+                  <th scope="col" id="th-acciones-empleados"><span class="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody id="tabla-empleados-cuerpo"></tbody>
