@@ -1,17 +1,15 @@
 /**
  * config.js
  * ----------------------------------------------------------------------
- * ACA VA LA CONFIGURACION DE TU PROYECTO DE FIREBASE.
- *
- * Consola de Firebase → Configuracion del proyecto → Tus apps → Web →
- * "SDK setup and configuration" → Config. Copia el objeto y pegalo abajo.
+ * Configuracion del proyecto de Firebase "reloj-cerro-dragon".
  *
  * Estos valores NO son secretos: van en claro en cualquier app web y se
- * pueden leer desde el navegador. Es asi por diseno. La seguridad real
- * esta en las reglas de Firestore (mira firestore.rules).
+ * pueden leer desde el navegador de cualquier visitante. Es asi por diseno,
+ * y por eso no hay problema en subirlos a Git.
  *
- * Mientras no lo configures, el sistema arranca en MODO LOCAL: sin login,
- * con el padron guardado en este navegador. Sirve para probar.
+ * Lo que protege los datos de verdad son las reglas de Firestore
+ * (firestore.rules). Sin publicarlas, cualquiera con esta URL puede leer y
+ * escribir toda la base.
  * ----------------------------------------------------------------------
  */
 
@@ -20,12 +18,13 @@ export const FIREBASE = {
   VERSION_SDK: '12.18.0',
 
   config: {
-    apiKey: 'PEGAR_API_KEY',
-    authDomain: 'PEGAR_PROYECTO.firebaseapp.com',
-    projectId: 'PEGAR_PROYECTO',
-    storageBucket: 'PEGAR_PROYECTO.appspot.com',
-    messagingSenderId: 'PEGAR_SENDER_ID',
-    appId: 'PEGAR_APP_ID',
+    apiKey: 'AIzaSyBsHyREZsxoh4UIzw5CQttfYQ_nOEfrEVY',
+    authDomain: 'reloj-cerro-dragon.firebaseapp.com',
+    databaseURL: 'https://reloj-cerro-dragon-default-rtdb.firebaseio.com',
+    projectId: 'reloj-cerro-dragon',
+    storageBucket: 'reloj-cerro-dragon.firebasestorage.app',
+    messagingSenderId: '384046342183',
+    appId: '1:384046342183:web:4bbe4401ff9c19fcaa2e02',
   },
 };
 
