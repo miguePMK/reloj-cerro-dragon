@@ -1,0 +1,72 @@
+rules_version = '2';
+
+/**
+ * Reglas de Firestore para el Control de Fichadas.
+ *
+ * Pegalas en: consola de Firebase → Firestore Database → Reglas → Publicar.
+ *
+ * Sin estas reglas, cualquiera que abra la pagina puede leer y escribir toda
+ * la base. El firebaseConfig es publico por diseno; esto es lo que protege
+ * los datos de verdad.
+ *
+ * El rol se lee de usuarios/{uid}. Los get() que se hacen adentro de las
+ * reglas no pasan por las reglas, asi que no hay recursion.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function perfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    // Sesion abierta, con perfil cargado y no desactivado.
+    function habilitado() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && perfil().activo == true;
+    }
+
+    function esAdmin() {
+      return habilitado() && perfil().rol == 'admin';
+    }
+
+    match /usuarios/{uid} {
+      // Cada uno puede leer su propio perfil: hace falta para que el login
+      // pueda averiguar el rol, y para que un usuario desactivado se entere.
+      allow get: if request.auth != null && (request.auth.uid == uid || esAdmin());
+
+      // Ver el listado completo de usuarios es solo del admin.
+      allow list: if esAdmin();
+
+      // Alta y modificacion de usuarios: solo admin.
+      allow create: if esAdmin()
+        && request.resource.data.keys().hasAll(['email', 'nombre', 'rol', 'activo'])
+        && request.resource.data.rol in ['admin', 'operador'];
+
+      allow update: if esAdmin()
+        && request.resource.data.rol in ['admin', 'operador']
+        // Nadie puede sacarse a si mismo el rol de admin ni desactivarse:
+        // evita quedarse sin ningun administrador por accidente.
+        && (request.auth.uid != uid
+            || (request.resource.data.rol == 'admin' && request.resource.data.activo == true));
+
+      // Borrar deja la cuenta de Authentication huerfana. Se desactiva, no se borra.
+      allow delete: if false;
+    }
+
+    match /empleados/{legajo} {
+      // Cualquier usuario habilitado necesita leer el padron para que la
+      // tabla de fichadas muestre los nombres.
+      allow read: if habilitado();
+
+      // El ABM del padron es solo del admin.
+      allow write: if esAdmin();
+    }
+
+    // Todo lo que no este declarado arriba queda cerrado.
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

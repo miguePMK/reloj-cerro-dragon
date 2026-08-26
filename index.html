@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fichadas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%231C242B'/%3E%3Crect x='7' y='9' width='18' height='3' rx='1' fill='%23F4F2EC'/%3E%3Crect x='7' y='15' width='12' height='3' rx='1' fill='%2335618E'/%3E%3Crect x='7' y='21' width='15' height='3' rx='1' fill='%23F4F2EC'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilos.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div id="avisos" class="avisos" aria-live="polite"></div>
+
+<!-- ===================== ARRANQUE ===================== -->
+<div id="pantalla-carga" class="pantalla-plena">
+  <div class="cargando">
+    <span class="cargando-barra" aria-hidden="true"></span>
+    <p>Conectando…</p>
+  </div>
+</div>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="pantalla-login" class="pantalla-plena" hidden>
+  <div class="login">
+    <div class="login-tarjeta">
+      <div class="login-encabezado">
+        <p class="eyebrow" id="login-empresa"></p>
+        <h1>Control de fichadas</h1>
+        <p class="login-bajada">Reloj biometrico · registro de jornadas</p>
+      </div>
+
+      <div id="form-login" class="form">
+        <label class="campo">
+          <span>Email</span>
+          <input type="email" id="login-email" autocomplete="username" spellcheck="false" placeholder="nombre@novadrill.com">
+        </label>
+        <label class="campo">
+          <span>Clave</span>
+          <input type="password" id="login-clave" autocomplete="current-password">
+        </label>
+
+        <p id="login-error" class="mensaje-error" hidden></p>
+
+        <button type="button" id="btn-entrar" class="btn btn--primario btn--pleno">Entrar</button>
+        <button type="button" id="btn-olvide" class="btn btn--texto">Olvide mi clave</button>
+      </div>
+    </div>
+    <p class="login-pie">Las fichadas se procesan en tu computadora. El archivo del reloj no se sube a ningun servidor.</p>
+  </div>
+</div>
+
+<!-- ===================== APLICACION ===================== -->
+<div id="app" class="app" hidden>
+
+  <aside class="barra-lateral">
+    <div class="marca">
+      <span class="marca-sello" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M4 6h16M4 12h9M4 18h13"/>
+        </svg>
+      </span>
+      <span class="marca-texto">
+        <strong>Fichadas</strong>
+        <small id="marca-empresa"></small>
+      </span>
+    </div>
+
+    <nav class="menu" aria-label="Secciones">
+      <a class="menu-item" data-ruta="fichadas" href="#/fichadas">
+        <span class="menu-rotulo">Fichadas</span>
+        <span class="menu-detalle" id="menu-detalle-fichadas">sin archivo</span>
+      </a>
+      <a class="menu-item" data-ruta="empleados" href="#/empleados" data-solo-admin>
+        <span class="menu-rotulo">Empleados</span>
+        <span class="menu-detalle" id="menu-detalle-empleados"></span>
+      </a>
+      <a class="menu-item" data-ruta="usuarios" href="#/usuarios" data-solo-admin data-solo-firebase>
+        <span class="menu-rotulo">Usuarios</span>
+        <span class="menu-detalle" id="menu-detalle-usuarios"></span>
+      </a>
+    </nav>
+
+    <div class="sesion">
+      <div id="modo-local" class="modo-local" hidden>
+        <strong>Modo local</strong>
+        <span>Sin Firebase: el padron se guarda solo en este navegador.</span>
+      </div>
+      <p class="sesion-nombre" id="sesion-nombre"></p>
+      <p class="sesion-rol" id="sesion-rol"></p>
+      <button type="button" id="btn-salir" class="btn btn--texto btn--chico" hidden>Cerrar sesion</button>
+    </div>
+  </aside>
+
+  <main class="lienzo">
+
+    <!-- ============================ FICHADAS ============================ -->
+    <section id="vista-fichadas" class="vista" hidden>
+
+      <header class="titulo-vista">
+        <h2>Fichadas</h2>
+        <p>Carga la bajada del reloj para ver las jornadas del periodo.</p>
+      </header>
+
+      <div id="zona-carga" class="zona">
+        <div class="zona-cuerpo">
+          <p class="zona-titulo">Solta el archivo del reloj</p>
+          <p class="zona-ayuda">La bajada USB del biometrico, tipo <code>ZTC8252300165_attlog.dat</code></p>
+        </div>
+        <button type="button" id="btn-elegir" class="btn btn--primario">Elegir archivo</button>
+        <input type="file" id="archivo-dat" accept=".dat,.txt" hidden>
+      </div>
+
+      <div id="lectura" class="lectura" hidden>
+        <dl class="lectura-datos">
+          <div><dt>Reloj</dt><dd id="lectura-serie" class="mono"></dd></div>
+          <div><dt>Archivo</dt><dd id="lectura-archivo" class="mono trunc"></dd></div>
+          <div><dt>Marcas</dt><dd id="lectura-marcas" class="mono"></dd></div>
+          <div><dt>Legajos</dt><dd id="lectura-legajos" class="mono"></dd></div>
+          <div><dt>Periodo</dt><dd id="lectura-rango" class="mono"></dd></div>
+        </dl>
+        <button type="button" id="btn-descartar" class="btn btn--chico">Cargar otro</button>
+      </div>
+
+      <div id="panel-errores" class="alerta alerta--error" hidden>
+        <p class="alerta-titulo"><span id="errores-cantidad"></span> linea(s) no se pudieron leer</p>
+        <ul id="lista-errores" class="lista-errores"></ul>
+      </div>
+
+      <p id="sin-datos" class="vacio-pantalla">Todavia no cargaste ningun archivo.</p>
+
+      <div id="resultados" hidden>
+
+        <div class="kpis">
+          <div class="kpi"><span class="kpi-valor mono" id="kpi-empleados">0</span><span class="kpi-rotulo">Empleados</span></div>
+          <div class="kpi"><span class="kpi-valor mono" id="kpi-jornadas">0</span><span class="kpi-rotulo">Jornadas</span></div>
+          <div class="kpi kpi--destacado"><span class="kpi-valor mono" id="kpi-horas">0:00</span><span class="kpi-rotulo">Horas del periodo</span></div>
+          <div class="kpi"><span class="kpi-valor mono" id="kpi-pendientes">0</span><span class="kpi-rotulo">A revisar</span></div>
+        </div>
+
+        <div id="aviso-sin-cargar" class="alerta alerta--aviso" hidden>
+          <p id="aviso-sin-cargar-texto"></p>
+          <a href="#/empleados" class="btn btn--chico" id="aviso-sin-cargar-boton">Ir a Empleados</a>
+        </div>
+
+        <div class="herramientas">
+          <label class="campo campo--ancho">
+            <span>Empleado</span>
+            <select id="filtro-empleado"></select>
+          </label>
+          <label class="campo campo--corto">
+            <span>Desde</span>
+            <input type="date" id="filtro-desde">
+          </label>
+          <label class="campo campo--corto">
+            <span>Hasta</span>
+            <input type="date" id="filtro-hasta">
+          </label>
+          <label class="campo">
+            <span>Buscar</span>
+            <input type="search" id="filtro-texto" placeholder="Nombre o sector">
+          </label>
+          <label class="tilde">
+            <input type="checkbox" id="filtro-observaciones">
+            <span>Solo con observaciones</span>
+          </label>
+          <div class="herramientas-acciones">
+            <button type="button" id="btn-limpiar-filtros" class="btn btn--chico">Limpiar</button>
+            <button type="button" id="btn-excel" class="btn btn--primario">Descargar Excel</button>
+          </div>
+        </div>
+
+        <p id="conteo-filas" class="conteo"></p>
+
+        <div class="tabla-marco">
+          <table id="tabla-jornadas" class="tabla tabla--jornadas">
+            <caption class="sr-only">Detalle de jornadas por dia</caption>
+            <thead>
+              <tr>
+                <th data-orden="legajo" data-tipo="legajo" scope="col">Leg.</th>
+                <th data-orden="nombre" data-tipo="texto" scope="col">Nombre</th>
+                <th data-orden="fecha" data-tipo="texto" scope="col">Fecha</th>
+                <th data-orden="dia" data-tipo="texto" scope="col">Dia</th>
+                <th class="th--pista" scope="col">
+                  <span class="th-rotulo">Jornada</span>
+                  <span class="escala" id="escala-horas" aria-hidden="true"></span>
+                </th>
+                <th data-orden="horaEntrada" data-tipo="texto" scope="col">Entrada</th>
+                <th data-orden="horaSalida" data-tipo="texto" scope="col">Salida</th>
+                <th data-orden="minutos" data-tipo="numero" scope="col">Total</th>
+                <th data-orden="estado" data-tipo="texto" scope="col">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-jornadas-cuerpo"></tbody>
+          </table>
+        </div>
+
+        <details class="desplegable">
+          <summary>Resumen por empleado</summary>
+          <div class="tabla-marco">
+            <table id="tabla-resumen" class="tabla">
+              <caption class="sr-only">Totales por empleado en el periodo filtrado</caption>
+              <thead>
+                <tr>
+                  <th data-orden="legajo" data-tipo="legajo" scope="col">Leg.</th>
+                  <th data-orden="nombre" data-tipo="texto" scope="col">Nombre</th>
+                  <th data-orden="sector" data-tipo="texto" scope="col">Sector</th>
+                  <th data-orden="dias" data-tipo="numero" scope="col">Dias</th>
+                  <th data-orden="minutos" data-tipo="numero" scope="col">Total horas</th>
+                  <th data-orden="promedioTexto" data-tipo="texto" scope="col">Promedio</th>
+                  <th data-orden="aRevisar" data-tipo="numero" scope="col">A revisar</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-resumen-cuerpo"></tbody>
+            </table>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+    <!-- ============================ EMPLEADOS ============================ -->
+    <section id="vista-empleados" class="vista" hidden>
+
+      <header class="titulo-vista">
+        <h2>Empleados del reloj</h2>
+        <p>El legajo es el numero que registra el biometrico. El nombre sirve para leer las tablas.</p>
+      </header>
+
+      <div id="panel-detectados" class="alerta alerta--aviso" hidden>
+        <p class="alerta-titulo" id="detectados-titulo"></p>
+        <p class="alerta-ayuda">Toca un legajo para completarlo, o dalos de alta todos juntos y ponele los nombres despues.</p>
+        <div id="lista-detectados" class="pastillas"></div>
+        <button type="button" id="btn-alta-masiva" class="btn btn--chico">Dar de alta los legajos detectados</button>
+      </div>
+
+      <div class="dos-columnas">
+
+        <div class="tarjeta">
+          <h3 id="form-titulo">Nuevo empleado</h3>
+          <div id="form-empleado" class="form">
+            <label class="campo">
+              <span>Legajo</span>
+              <input type="text" id="emp-legajo" inputmode="numeric" autocomplete="off" placeholder="1713">
+            </label>
+            <label class="campo">
+              <span>Nombre</span>
+              <input type="text" id="emp-nombre" autocomplete="off" placeholder="Perez, Juan Carlos">
+            </label>
+            <label class="campo">
+              <span>Sector</span>
+              <input type="text" id="emp-sector" autocomplete="off" placeholder="Taller">
+            </label>
+            <label class="tilde">
+              <input type="checkbox" id="emp-activo" checked>
+              <span>Activo</span>
+            </label>
+            <div class="form-acciones">
+              <button type="button" id="btn-guardar-empleado" class="btn btn--primario">Agregar empleado</button>
+              <button type="button" id="btn-cancelar-edicion" class="btn btn--texto" hidden>Cancelar</button>
+            </div>
+          </div>
+
+          <div class="tarjeta-pie">
+            <p class="nota" id="nota-almacenamiento"></p>
+            <div class="form-acciones">
+              <button type="button" id="btn-importar" class="btn btn--chico">Importar CSV o JSON</button>
+              <button type="button" id="btn-exportar-empleados" class="btn btn--chico">Exportar JSON</button>
+              <button type="button" id="btn-vaciar-empleados" class="btn btn--chico btn--peligro">Vaciar padron</button>
+            </div>
+            <input type="file" id="archivo-empleados" accept=".csv,.txt,.json" hidden>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-encabezado">
+            <h3>Padron</h3>
+            <p id="conteo-empleados" class="conteo"></p>
+          </div>
+          <label class="campo">
+            <span class="sr-only">Buscar empleado</span>
+            <input type="search" id="buscar-empleado" placeholder="Buscar por legajo, nombre o sector">
+          </label>
+          <div class="tabla-marco">
+            <table id="tabla-empleados" class="tabla">
+              <caption class="sr-only">Empleados cargados</caption>
+              <thead>
+                <tr>
+                  <th data-orden="legajo" data-tipo="legajo" scope="col">Leg.</th>
+                  <th data-orden="nombre" data-tipo="texto" scope="col">Nombre</th>
+                  <th data-orden="sector" data-tipo="texto" scope="col">Sector</th>
+                  <th data-orden="activo" data-tipo="texto" scope="col">Estado</th>
+                  <th scope="col"><span class="sr-only">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody id="tabla-empleados-cuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================ USUARIOS ============================ -->
+    <section id="vista-usuarios" class="vista" hidden>
+
+      <header class="titulo-vista">
+        <h2>Usuarios del sistema</h2>
+        <p>Quienes pueden entrar a esta pagina. Distinto de los empleados del reloj.</p>
+      </header>
+
+      <div class="dos-columnas">
+
+        <div class="tarjeta">
+          <h3>Nuevo usuario</h3>
+          <div id="form-usuario" class="form">
+            <label class="campo">
+              <span>Nombre</span>
+              <input type="text" id="usr-nombre" autocomplete="off" placeholder="Miguel Sanchez">
+            </label>
+            <label class="campo">
+              <span>Email</span>
+              <input type="email" id="usr-email" autocomplete="off" spellcheck="false" placeholder="miguel@novadrill.com">
+            </label>
+            <label class="campo">
+              <span>Clave inicial</span>
+              <input type="text" id="usr-clave" autocomplete="off" placeholder="minimo 6 caracteres">
+            </label>
+            <label class="campo">
+              <span>Rol</span>
+              <select id="usr-rol">
+                <option value="operador">Operador — solo procesa fichadas</option>
+                <option value="admin">Administrador — ademas gestiona padron y usuarios</option>
+              </select>
+            </label>
+            <div class="form-acciones">
+              <button type="button" id="btn-crear-usuario" class="btn btn--primario">Crear usuario</button>
+            </div>
+            <p class="nota">Pasale la clave inicial por un canal aparte. Puede cambiarla con "Olvide mi clave" en el login.</p>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <div class="tarjeta-encabezado">
+            <h3>Usuarios</h3>
+            <p id="conteo-usuarios" class="conteo"></p>
+          </div>
+          <div class="tabla-marco">
+            <table id="tabla-usuarios" class="tabla">
+              <caption class="sr-only">Usuarios del sistema</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Nombre</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Rol</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col"><span class="sr-only">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody id="tabla-usuarios-cuerpo"></tbody>
+            </table>
+          </div>
+          <p class="nota">Desactivar bloquea el acceso al instante. Borrar la cuenta de Authentication solo se puede desde la consola de Firebase.</p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
