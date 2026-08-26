@@ -36,7 +36,7 @@
       <div id="form-login" class="form">
         <label class="campo">
           <span>Email</span>
-          <input type="email" id="login-email" autocomplete="username" spellcheck="false" placeholder="nombre@novadrill.com">
+          <input type="email" id="login-email" autocomplete="username" spellcheck="false" placeholder="nombre@petromark.com.ar">
         </label>
         <label class="campo">
           <span>Clave</span>
@@ -47,6 +47,26 @@
 
         <button type="button" id="btn-entrar" class="btn btn--primario btn--pleno">Entrar</button>
         <button type="button" id="btn-olvide" class="btn btn--texto">Olvide mi clave</button>
+      </div>
+
+      <div id="form-inicial" class="form" hidden>
+        <p class="aviso-inicial">Todavia no hay ningun usuario. Crea el administrador inicial: desde esa cuenta vas a poder dar de alta a los demas.</p>
+        <label class="campo">
+          <span>Nombre</span>
+          <input type="text" id="inicial-nombre" autocomplete="off" placeholder="Miguel Sanchez">
+        </label>
+        <label class="campo">
+          <span>Email</span>
+          <input type="email" id="inicial-email" autocomplete="off" spellcheck="false" placeholder="nombre@petromark.com.ar">
+        </label>
+        <label class="campo">
+          <span>Clave</span>
+          <input type="password" id="inicial-clave" autocomplete="new-password" placeholder="minimo 6 caracteres">
+        </label>
+
+        <p id="inicial-error" class="mensaje-error" hidden></p>
+
+        <button type="button" id="btn-crear-inicial" class="btn btn--primario btn--pleno">Crear administrador</button>
       </div>
     </div>
     <p class="login-pie">Las fichadas se procesan en tu computadora. El archivo del reloj no se sube a ningun servidor.</p>
@@ -323,7 +343,7 @@
             </label>
             <label class="campo">
               <span>Email</span>
-              <input type="email" id="usr-email" autocomplete="off" spellcheck="false" placeholder="miguel@novadrill.com">
+              <input type="email" id="usr-email" autocomplete="off" spellcheck="false" placeholder="miguel@petromark.com.ar">
             </label>
             <label class="campo">
               <span>Clave inicial</span>

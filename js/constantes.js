@@ -6,8 +6,8 @@
 
 export const APP = {
   NOMBRE: 'Control de Fichadas',
-  VERSION: '0.2',
-  EMPRESA: 'Novadrill S.R.L.',
+  VERSION: '0.3',
+  EMPRESA: 'Petromark S.R.L.',
 };
 
 /* ------------------------------------------------------------------ */

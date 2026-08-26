@@ -5,12 +5,11 @@ rules_version = '2';
  *
  * Pegalas en: consola de Firebase → Firestore Database → Reglas → Publicar.
  *
- * Sin estas reglas, cualquiera que abra la pagina puede leer y escribir toda
- * la base. El firebaseConfig es publico por diseno; esto es lo que protege
- * los datos de verdad.
- *
- * El rol se lee de usuarios/{uid}. Los get() que se hacen adentro de las
- * reglas no pasan por las reglas, asi que no hay recursion.
+ * Version corta. La unica regla que no se puede aflojar es que el acceso
+ * exige un documento en usuarios/{uid}: la apiKey es publica, asi que
+ * cualquiera puede crearse una cuenta llamando a la API de Firebase por
+ * fuera de la pagina. Tener cuenta no es tener acceso; el documento de
+ * usuario es lo que lo habilita.
  */
 
 service cloud.firestore {
@@ -31,36 +30,38 @@ service cloud.firestore {
       return habilitado() && perfil().rol == 'admin';
     }
 
-    match /usuarios/{uid} {
-      // Cada uno puede leer su propio perfil: hace falta para que el login
-      // pueda averiguar el rol, y para que un usuario desactivado se entere.
-      allow get: if request.auth != null && (request.auth.uid == uid || esAdmin());
+    // Todavia no se creo el administrador inicial.
+    function sinInicializar() {
+      return !exists(/databases/$(database)/documents/config/sistema);
+    }
 
-      // Ver el listado completo de usuarios es solo del admin.
+    // Centinela de puesta en marcha. Se lee sin login para que la pantalla
+    // de acceso sepa si tiene que ofrecer "crear el primer administrador".
+    match /config/sistema {
+      allow read: if true;
+      allow create: if request.auth != null && sinInicializar();
+      allow update, delete: if false;
+    }
+
+    match /usuarios/{uid} {
+      // Cada uno lee su propio perfil (el login necesita saber el rol).
+      // El admin lee la lista completa.
+      allow get: if request.auth != null && (request.auth.uid == uid || esAdmin());
       allow list: if esAdmin();
 
-      // Alta y modificacion de usuarios: solo admin.
+      // Alta: el admin crea usuarios. La excepcion es el primer
+      // administrador, que se crea a si mismo mientras no exista el centinela.
       allow create: if esAdmin()
-        && request.resource.data.keys().hasAll(['email', 'nombre', 'rol', 'activo'])
-        && request.resource.data.rol in ['admin', 'operador'];
+        || (request.auth != null && request.auth.uid == uid && sinInicializar());
 
-      allow update: if esAdmin()
-        && request.resource.data.rol in ['admin', 'operador']
-        // Nadie puede sacarse a si mismo el rol de admin ni desactivarse:
-        // evita quedarse sin ningun administrador por accidente.
-        && (request.auth.uid != uid
-            || (request.resource.data.rol == 'admin' && request.resource.data.activo == true));
+      allow update: if esAdmin();
 
-      // Borrar deja la cuenta de Authentication huerfana. Se desactiva, no se borra.
+      // Borrar dejaria la cuenta de Authentication huerfana: se desactiva.
       allow delete: if false;
     }
 
     match /empleados/{legajo} {
-      // Cualquier usuario habilitado necesita leer el padron para que la
-      // tabla de fichadas muestre los nombres.
       allow read: if habilitado();
-
-      // El ABM del padron es solo del admin.
       allow write: if esAdmin();
     }
 

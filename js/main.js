@@ -10,7 +10,14 @@
 
 import { APP } from './constantes.js';
 import { firebaseConfigurado } from './config.js';
-import { ROLES, ETIQUETA_ROL, observarSesion, cerrarSesion, esAdmin } from './nucleo/sesion.js';
+import {
+  ROLES,
+  ETIQUETA_ROL,
+  observarSesion,
+  cerrarSesion,
+  esAdmin,
+  sistemaInicializado,
+} from './nucleo/sesion.js';
 import { crearRepoEmpleadosLocal } from './nucleo/repo_empleados.js';
 import { RepoEmpleadosFirestore } from './nucleo/repo_empleados_firestore.js';
 import { RepoUsuarios } from './nucleo/repo_usuarios.js';
@@ -46,6 +53,7 @@ const VISTAS = {
 
 let vistas = null;
 let vistaLogin = null;
+let observadorEnPausa = false;
 
 /* ------------------------------------------------------------------ */
 /* Pantallas                                                          */
@@ -175,22 +183,35 @@ async function entrarAlSistema(perfil) {
   if (estado.puedeEditarPadron) await vistas.empleados.refrescar();
 }
 
-/** Vuelve al login sin dejar datos de la sesion anterior a la vista. */
-function salirDelSistema(mensaje = '') {
+/** Borra de memoria y de pantalla los datos de la sesion anterior. */
+function limpiarSesion() {
   estado.sesion = null;
   estado.repo = null;
   estado.puedeEditarPadron = false;
 
-  // Borra de la pantalla las fichadas del usuario anterior. Las vistas
-  // quedan armadas (ver montarVistas), solo se limpia su contenido.
+  // Las vistas quedan armadas (ver montarVistas), solo se limpia su contenido.
   vistas?.fichadas?.limpiar();
 
   estado.lectura = null;
   estado.jornadas = [];
   estado.filtrosIniciados = false;
+}
 
-  verPantalla('login');
-  vistaLogin?.reiniciar(mensaje);
+/**
+ * Corre una operacion con el observador de sesion en pausa.
+ *
+ * Hace falta para el alta del administrador inicial: crear la cuenta abre la
+ * sesion antes de que exista el documento usuarios/{uid}, y el observador
+ * leeria ese estado intermedio como "cuenta sin habilitar" y lo echaria justo
+ * cuando se esta dando de alta.
+ */
+async function conObservadorEnPausa(operacion) {
+  observadorEnPausa = true;
+  try {
+    return await operacion();
+  } finally {
+    observadorEnPausa = false;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -217,11 +238,33 @@ async function arrancar() {
     return;
   }
 
-  vistaLogin = crearVistaLogin(entrarAlSistema);
+  vistaLogin = crearVistaLogin({
+    alEntrar: entrarAlSistema,
+    envolverAlta: conObservadorEnPausa,
+  });
+
+  /**
+   * Decide que cara mostrar del login. La primera vez que se abre el sistema
+   * no hay ningun usuario, asi que en lugar de pedir una clave que no existe
+   * ofrece crear el administrador inicial.
+   */
+  async function elegirCaraDelLogin(mensaje = '') {
+    try {
+      vistaLogin.usarModo((await sistemaInicializado()) ? 'login' : 'inicial');
+    } catch {
+      // Si no se puede leer el centinela (reglas sin publicar, sin conexion),
+      // mostramos el acceso normal: es lo menos sorprendente.
+      vistaLogin.usarModo('login');
+    }
+    verPantalla('login');
+    vistaLogin.reiniciar(mensaje);
+  }
 
   try {
     // Se dispara al arrancar (por si ya habia sesion) y en cada cambio.
     await observarSesion(async (perfil, error) => {
+      if (observadorEnPausa) return;
+
       if (perfil) {
         // Si ya estabamos adentro, no rearmamos todo.
         if (estado.sesion?.uid === perfil.uid) return;
@@ -231,7 +274,8 @@ async function arrancar() {
 
       // Sesion cerrada. Si vino con error, es una cuenta que autentico pero
       // no esta habilitada: hay que decirle por que no entra.
-      salirDelSistema(error?.message || '');
+      limpiarSesion();
+      await elegirCaraDelLogin(error?.message || '');
     });
   } catch (error) {
     // No se pudo ni cargar el SDK: mostramos el login con el motivo.

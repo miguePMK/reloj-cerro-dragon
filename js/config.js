@@ -39,4 +39,8 @@ export function firebaseConfigurado() {
 export const COLECCIONES = {
   USUARIOS: 'usuarios',
   EMPLEADOS: 'empleados',
+  // Marca de "el sistema ya tiene su primer admin". Es lo que evita que
+  // cualquiera se declare administrador despues de la puesta en marcha.
+  CONFIG: 'config',
+  DOC_SISTEMA: 'sistema',
 };

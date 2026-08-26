@@ -126,3 +126,91 @@ export async function enviarResetClave(email) {
 export function esAdmin(perfil) {
   return perfil?.rol === ROLES.ADMIN;
 }
+
+/* ------------------------------------------------------------------ */
+/* Puesta en marcha: el primer administrador                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * true si el sistema ya tiene su administrador inicial.
+ *
+ * Se apoya en un documento centinela (config/sistema) porque las reglas de
+ * Firestore no pueden preguntar "esta vacia la coleccion usuarios?". Ese
+ * documento se lee sin estar logueado: es lo unico publico de la base, y solo
+ * dice si el sistema ya arranco.
+ */
+export async function sistemaInicializado() {
+  const fb = await obtenerFirebase();
+  const ref = fb.dbMod.doc(fb.db, COLECCIONES.CONFIG, COLECCIONES.DOC_SISTEMA);
+  const snap = await fb.dbMod.getDoc(ref);
+  return snap.exists();
+}
+
+/**
+ * Crea la primera cuenta y la deja como administrador.
+ *
+ * Solo funciona una vez: despues de esto existe config/sistema y las reglas
+ * no dejan que nadie mas se autoproclame admin. De ahi en adelante los
+ * usuarios se crean desde la pestaña Usuarios.
+ *
+ * Aca si nos sirve que createUserWithEmailAndPassword deje la sesion abierta:
+ * el que crea la cuenta es el propio administrador inicial.
+ */
+export async function crearPrimerAdmin({ nombre, email, clave }) {
+  const correo = String(email || '').trim();
+  const nombreLimpio = String(nombre || '').trim();
+
+  if (!nombreLimpio) throw new ErrorSesion('Escribi tu nombre.', 'validacion');
+  if (!correo) throw new ErrorSesion('Escribi tu email.', 'validacion');
+  if (!clave || clave.length < 6) {
+    throw new ErrorSesion('La clave tiene que tener al menos 6 caracteres.', 'validacion');
+  }
+
+  const fb = await obtenerFirebase();
+
+  // Si alguien se adelanto entre que se cargo la pantalla y ahora, cortamos.
+  if (await sistemaInicializado()) {
+    throw new ErrorSesion(
+      'El sistema ya tiene un administrador. Entra con tu email y clave.',
+      'ya-inicializado'
+    );
+  }
+
+  let uid;
+  try {
+    const cred = await fb.authMod.createUserWithEmailAndPassword(fb.auth, correo, clave);
+    uid = cred.user.uid;
+  } catch (error) {
+    throw new ErrorSesion(mensajeDeError(error), 'credenciales');
+  }
+
+  const perfil = {
+    email: correo,
+    nombre: nombreLimpio,
+    rol: ROLES.ADMIN,
+    activo: true,
+  };
+
+  try {
+    // Primero el perfil: las reglas lo permiten mientras no exista el centinela.
+    await fb.dbMod.setDoc(fb.dbMod.doc(fb.db, COLECCIONES.USUARIOS, uid), {
+      ...perfil,
+      creado: fb.dbMod.serverTimestamp(),
+    });
+
+    // Y recien despues el centinela, que cierra la puerta.
+    await fb.dbMod.setDoc(fb.dbMod.doc(fb.db, COLECCIONES.CONFIG, COLECCIONES.DOC_SISTEMA), {
+      inicializado: true,
+      primerAdmin: uid,
+      fecha: fb.dbMod.serverTimestamp(),
+    });
+  } catch (error) {
+    throw new ErrorSesion(
+      `Se creo la cuenta ${correo} pero no se pudo guardar el perfil: ${mensajeDeError(error)}. ` +
+        'Revisa que las reglas de Firestore esten publicadas.',
+      'sin-perfil'
+    );
+  }
+
+  return { uid, ...perfil };
+}

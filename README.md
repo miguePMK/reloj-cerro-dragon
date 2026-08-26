@@ -27,66 +27,63 @@ Y abris `http://localhost:8000`.
 
 ---
 
-## Poner Firebase (7 pasos)
+## Poner Firebase (5 pasos)
 
 ### 1. Crear el proyecto
 
 En [console.firebase.google.com](https://console.firebase.google.com) → Agregar
 proyecto. Analytics no hace falta.
 
-### 2. Registrar la app web
+### 2. Registrar la app web y pegar la config
 
-Dentro del proyecto → icono `</>` (Web) → le pones un nombre → Registrar app.
-Te muestra el objeto `firebaseConfig`.
+Dentro del proyecto → icono `</>` (Web) → nombre → Registrar app. Te muestra el
+objeto `firebaseConfig`; copialo en `js/config.js`.
 
-### 3. Pegar la config
+El proyecto `reloj-cerro-dragon` ya viene configurado en este repo.
 
-Copia ese objeto en `js/config.js`, reemplazando los `PEGAR_*`.
-
-Estos valores **no son secretos**: van en claro en cualquier app web y se leen
-desde el navegador. Es asi por diseno. Lo que protege los datos son las reglas
-del paso 6.
-
-### 4. Habilitar el login por email
+### 3. Habilitar el login por email
 
 Authentication → Get started → Sign-in method → Email/Password → Habilitar.
 Si te salteas esto, el login falla con "operation-not-allowed".
 
-### 5. Crear Firestore
+### 4. Crear Firestore y publicar las reglas
 
-Firestore Database → Crear base de datos → elegi la region mas cercana
-(`southamerica-east1` es Sao Paulo). Arranca en modo produccion.
+Firestore Database → Crear base de datos → region mas cercana
+(`southamerica-east1` es Sao Paulo), modo produccion.
 
-### 6. Publicar las reglas
+Despues: Reglas → pega todo `firestore.rules` → Publicar.
 
-Firestore Database → Reglas → pega todo el contenido de `firestore.rules` →
-Publicar.
+### 5. Crear el administrador inicial
 
-**Este paso no es opcional.** Sin las reglas, cualquiera que abra la pagina
-puede leer y escribir toda la base.
+Abri la pagina. Como todavia no hay ningun usuario, la pantalla de acceso te
+ofrece crear el administrador inicial: nombre, email y clave. Desde esa cuenta
+das de alta a los demas en la pestaña Usuarios.
 
-### 7. Crear el primer administrador
-
-Es el unico que se hace a mano, porque todavia no hay ningun admin que pueda
-crear usuarios desde la app.
-
-1. Authentication → Users → Add user. Poné tu email y una clave.
-2. Copia el **User UID** que te queda en la lista.
-3. Firestore Database → Iniciar coleccion → ID de coleccion: `usuarios`.
-4. ID del documento: **pega el UID** (no lo generes automatico).
-5. Agrega estos campos:
-
-| Campo | Tipo | Valor |
-|-------|------|-------|
-| `email` | string | tu email |
-| `nombre` | string | tu nombre |
-| `rol` | string | `admin` |
-| `activo` | boolean | `true` |
-
-Guarda, recarga la pagina y ya entras con tu email y clave. De ahi en adelante
-los usuarios se crean desde la pestaña Usuarios.
+**Hacelo antes de publicar en Pages, o apenas publiques.** Mientras el sistema
+no tenga su primer admin, cualquiera que abra la URL puede crearse la cuenta de
+administrador. Una vez creado, esa puerta se cierra sola y no se puede volver a
+usar.
 
 ---
+
+## Como funciona el acceso
+
+Tres piezas, y ninguna sobra:
+
+1. **La cuenta** (Authentication): email y clave.
+2. **El perfil** (`usuarios/{uid}`): nombre, rol y si esta activo.
+3. **El centinela** (`config/sistema`): marca que el sistema ya arranco.
+
+La pieza 2 es la que hace el trabajo. La `apiKey` es publica y esta en el repo
+—es asi por diseno en toda app web—, y con Email/Password habilitado cualquiera
+puede crearse una cuenta llamando a la API de Firebase por fuera de esta pagina.
+Si las reglas dijeran "alcanza con estar autenticado", ese alguien entraria y
+leeria y escribiria toda la base. Tener cuenta no es tener acceso: el
+documento de perfil es lo que habilita, y solo un admin lo crea.
+
+La pieza 3 existe porque las reglas de Firestore no pueden preguntar "esta
+vacia la coleccion usuarios?". Con el centinela, el alta del primer admin se
+permite una sola vez.
 
 ## Roles
 
@@ -120,9 +117,11 @@ SDK. Desde el navegador solo se puede **desactivar**: el documento queda con
 instante. La cuenta de Authentication sigue existiendo; si la queres borrar de
 verdad, es desde la consola de Firebase.
 
-Ademas, las reglas no dejan que un admin se saque a si mismo el rol ni se
-desactive, y la app tampoco permite desactivar al ultimo admin activo. Es para
-no quedarse afuera del sistema por accidente.
+La app tampoco te deja cambiarte tu propio rol ni desactivar al ultimo admin
+activo, para no quedarse afuera del sistema por accidente. Eso es una
+comprobacion de la app, no de las reglas: si dos admins se desactivan a la vez
+podrian dejarse afuera, y en ese caso hay que arreglarlo desde la consola de
+Firebase editando el documento en `usuarios`.
 
 ---
 
@@ -133,14 +132,14 @@ index.html
 firestore.rules              reglas de seguridad (hay que publicarlas)
 css/estilos.css
 js/
-  config.js                  ACA va tu firebaseConfig
+  config.js                  firebaseConfig y nombres de colecciones
   firebase.js                carga del SDK, instancia secundaria, errores
   constantes.js              toda la configuracion de calculo y UI
   util.js                    helpers compartidos
   nucleo/
     parser_dat.js            lee el .dat, sin UI
     calculo.js               arma las jornadas, sin UI
-    sesion.js                login, logout, resolucion del rol
+    sesion.js                login, logout, rol, alta del primer admin
     repo_empleados.js        padron en localStorage (modo local)
     repo_empleados_firestore.js  padron en Firestore (misma interfaz)
     repo_usuarios.js         usuarios del sistema
@@ -232,7 +231,7 @@ con 47 minutos se distinguen de un vistazo del resto.
 ## Limitaciones conocidas
 
 - **Turnos que cruzan la medianoche.** Al agrupar por dia calendario, un turno
-  de 22:00 a 06:00 aparece como dos jornadas incompletas. Si en Novadrill hay
+  de 22:00 a 06:00 aparece como dos jornadas incompletas. Si en Petromark hay
   turno noche, hay que resolverlo antes de usar esto para liquidar.
 - **Sin horas extras.** Muestra entrada, salida y total. El calculo de extras al
   50% y 100% no esta.
@@ -257,4 +256,4 @@ publicado, revisa la capitalizacion de las carpetas.
 
 ---
 
-Version 0.2
+Version 0.3

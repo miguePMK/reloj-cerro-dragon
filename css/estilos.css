@@ -139,6 +139,16 @@ code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   font-size: 0.82rem;
 }
 
+.aviso-inicial {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(53, 97, 142, 0.06);
+  border-left: 2px solid var(--barra);
+  color: var(--tinta-2);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 /* ================================================================
    ESTRUCTURA DE LA APP
    ================================================================ */
