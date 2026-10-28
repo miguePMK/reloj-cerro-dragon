@@ -213,7 +213,8 @@ con 47 minutos se distinguen de un vistazo del resto.
   marca: la salida queda en blanco y no se inventa un total.
 - **Jornada sospechosa.** El 1984 marcó 16:31 y 17:18: queda en `Revisar` por
   estar debajo de `JORNADA_MINIMA_MINUTOS`.
-- **Legajo sin empleado cargado.** Se muestra igual, con el nombre en blanco.
+- **Legajo sin empleado cargado.** Se muestra igual, con el nombre y el sector
+  en blanco.
 
 ---
 
@@ -260,4 +261,4 @@ publicado, revisa la capitalizacion de las carpetas.
 
 ---
 
-Version 0.4
+Version 0.5

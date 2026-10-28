@@ -196,7 +196,7 @@ export function crearVistaFichadas(estado) {
 
     el.cuerpo.innerHTML = ordenadas.length
       ? ordenadas.map(filaJornada).join('')
-      : `<tr><td colspan="9" class="celda-vacia">Ningun registro coincide con los filtros.</td></tr>`;
+      : `<tr><td colspan="10" class="celda-vacia">Ningun registro coincide con los filtros.</td></tr>`;
 
     const t = totalizar(filtradas);
     texto('kpi-empleados', String(t.empleados));
@@ -277,6 +277,7 @@ export function crearVistaFichadas(estado) {
     return `<tr class="${clases.join(' ')}">
       <td class="num">${escaparHtml(j.legajo)}</td>
       <td>${nombre}</td>
+      <td class="sector">${escaparHtml(j.sector)}</td>
       <td class="num">${fechaLegible(j.fecha)}</td>
       <td class="dia">${escaparHtml(j.dia)}</td>
       <td>${pistaJornada(j)}</td>

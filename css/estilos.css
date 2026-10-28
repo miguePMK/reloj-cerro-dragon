@@ -446,6 +446,7 @@ code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .tabla .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .tabla .hora { color: var(--tinta-2); }
 .tabla .dia { color: var(--tinta-3); font-family: var(--cond); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.tabla .sector { color: var(--tinta-2); font-size: 0.82rem; }
 .tabla .total { font-weight: 600; }
 .tabla .acciones { white-space: nowrap; text-align: right; }
 
@@ -658,9 +659,11 @@ code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .lienzo { padding: 22px 16px 48px; }
 
   /* La barra de jornada necesita ancho para decir algo: en pantalla
-     chica se oculta y quedan las horas en numeros. */
-  .tabla--jornadas th:nth-child(5),
-  .tabla--jornadas td:nth-child(5) { display: none; }
+     chica se ocultan ella y el sector, y quedan las horas en numeros. */
+  .tabla--jornadas th:nth-child(3),
+  .tabla--jornadas td:nth-child(3),
+  .tabla--jornadas th:nth-child(6),
+  .tabla--jornadas td:nth-child(6) { display: none; }
 
   .herramientas-acciones { margin-left: 0; width: 100%; }
   .herramientas-acciones .btn { flex: 1; }
